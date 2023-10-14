@@ -7,7 +7,7 @@ _T = TypeVar("_T")
 
 
 class MetadataProvider(ABC, Generic[_T]):
-    def __init__(self) -> None:
+    def __init__(self, *args: object, **kwargs: object) -> None:
         self.metadata: dict[int, _T] = {}
 
     def resolve(self, tree: Tree) -> dict[int, _T]:

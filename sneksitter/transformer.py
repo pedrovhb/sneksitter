@@ -4,40 +4,31 @@ from typing import Any, NamedTuple
 
 from tree_sitter import Node, Tree, Parser
 
-from sneksitter.visitor import (
-    BaseVisitor,
-    NotRunSentinel,
-)
+from sneksitter.utils import CodeT, _normalize_code
+from sneksitter.visitor import BaseVisitor
 
 
 class BaseTransformer(BaseVisitor):
     def __init__(self, parser: Parser) -> None:
         super().__init__()
         self._parser = parser
-        self._replacements: set[NodeReplacement] = set()
+        self._replacements = dict[int, NodeReplacement]()
 
-    def add_replacement(
-        self,
-        node: Node,
-        replacement: str | bytes,
-    ) -> None:
-        if isinstance(replacement, str):
-            replacement = replacement.encode()
+    def add_replacement(self, node: Node, replacement_code: CodeT) -> None:
         if node.id in self._replacements:
             raise ValueError(f"Node {node} already has a replacement")
-        # We'll add the replacement to the dictionary with order - order is
-        # determined by the start byte of the node, and if two nodes have the
-        # same start byte, we'll use the end byte to determine order.
 
-        self._replacements.add(NodeReplacement(node=node, replacement=replacement))
+        replacement_code = _normalize_code(replacement_code)
+        replacement = NodeReplacement(node=node, replacement=replacement_code)
+        self._replacements[node.id] = replacement
 
     def _handle_leave_return_value(
         self,
         original_node: Node,
-        return_value: Any,
+        return_value: CodeT,
     ) -> None:
         """Handle the return value of a leave method."""
-        if return_value is not NotRunSentinel and return_value is not None:
+        if return_value:
             self.add_replacement(original_node, return_value)
 
     @classmethod
@@ -50,7 +41,7 @@ class BaseTransformer(BaseVisitor):
         """Transform the tree."""
         source = tree.text
         replacements = sorted(
-            self._replacements,
+            self._replacements.values(),
             key=lambda r: (r.node.start_byte, -r.node.end_byte),
             reverse=True,
         )

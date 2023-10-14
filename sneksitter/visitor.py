@@ -10,14 +10,14 @@ from typing import (
     Type,
     Any,
     TypeVar,
+    TypedDict,
 )
 
 from tree_sitter import Node, Tree, TreeCursor
 from typing_extensions import Self
 
 from sneksitter.metadata import MetadataProvider
-
-NotRunSentinel = object()
+from sneksitter.utils import CodeT
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
@@ -26,9 +26,13 @@ _T_co = TypeVar("_T_co", covariant=True)
 _T_contra = TypeVar("_T_contra", contravariant=True)
 
 
-MetadataForNodeT = dict[Type[MetadataProvider[_T]], _T | None]
-NodePredicateFnT = Callable[[Node, MetadataForNodeT], bool]
-NodeVisitorFnT = Callable[["BaseVisitor", Node, MetadataForNodeT], _R | None]
+_MetadataProviderDictT = dict[Type[MetadataProvider[_T]], MetadataProvider[_T]]
+_MetadataDictT = dict[Type[MetadataProvider[_T]], dict[int, _T | None]]
+_NodeMetadataDictT = dict[Type[MetadataProvider[_T]], _T | None]
+
+MetadataProviderT = TypeVar("MetadataProviderT", bound=MetadataProvider[Any])
+NodePredicateFnT = Callable[[Node, _MetadataDictT], bool]
+NodeVisitorFnT = Callable[["BaseVisitor", Node, _MetadataDictT], _R | None]
 
 
 class BaseVisitor(ABC):
@@ -38,8 +42,8 @@ class BaseVisitor(ABC):
     _leave_predicates: list[tuple[tuple[NodePredicateFnT], NodeVisitorFnT]] = []
     _visit_predicates: list[tuple[tuple[NodePredicateFnT], NodeVisitorFnT]] = []
 
-    _metadata_providers: dict[Type[MetadataProvider[_T]], MetadataProvider[_T]]
-    _metadata: dict[Type[MetadataProvider[_T]], dict[int, _T]]
+    _metadata_providers: _MetadataProviderDictT
+    _metadata: _MetadataDictT
 
     # Metadata providers for the visitor, to be defined by derived classes
     METADATA_PROVIDERS: ClassVar[Tuple[Type[MetadataProvider[Any]], ...]] = ()
@@ -48,8 +52,16 @@ class BaseVisitor(ABC):
         self._metadata_providers = {}
         self._metadata = {}
 
-    @cache
-    def _metadata_for_node_id(self, node_id: int) -> MetadataForNodeT[_T]:
+    # @cache
+    def _metadata_for_node_id(self, node_id: int) -> _NodeMetadataDictT[object]:
+        """Get the metadata for a node by its ID.
+
+        Args:
+            node_id: The ID of the node to get the metadata for.
+
+        Returns: The metadata for the node, as a dictionary that maps metadata provider classes
+                    to the metadata for the node.
+        """
         return {cls: metadata.get(node_id) for cls, metadata in self._metadata.items()}
 
     def __init_subclass__(cls, **kwargs):
@@ -88,7 +100,7 @@ class BaseVisitor(ABC):
         leave_result = self._leave(cursor.node, metadata)
         self._handle_leave_return_value(cursor.node, leave_result)
 
-    def _visit(self, node: Node, metadata: dict[Type[MetadataProvider[_T]], _T]) -> Any:
+    def _visit(self, node: Node, metadata: _MetadataDictT[object]) -> bool | None:
         """Call the visitor's visit methods."""
 
         # Check if there are any sets of predicates that match the node
@@ -102,13 +114,12 @@ class BaseVisitor(ABC):
             return specific_method(node, metadata)
         elif visit_method := getattr(self, "visit", None):
             return visit_method(node, metadata)
-        return NotRunSentinel
 
     def _leave(
         self,
         node: Node,
-        metadata: dict[Type[MetadataProvider[_T]], _T],
-    ) -> Any:
+        metadata: _MetadataDictT,
+    ) -> CodeT | None:
         """Call the visitor's leave methods."""
         # Check if there are any sets of predicates that match the node
         # and call the corresponding method if so.
@@ -121,7 +132,6 @@ class BaseVisitor(ABC):
             return specific_method(node, metadata)
         elif leave_method := getattr(self, "leave", None):
             return leave_method(node, metadata)
-        return NotRunSentinel
 
     def resolve_metadata(self, tree: Tree) -> None:
         for provider_cls in self.METADATA_PROVIDERS:

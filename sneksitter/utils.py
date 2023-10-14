@@ -1,13 +1,76 @@
 from __future__ import annotations
 
 import textwrap
+from collections import deque
 from functools import partial, wraps
-from typing import Callable, ParamSpec, TypeVar
+from pathlib import Path
+from typing import Callable, ParamSpec, TypeVar, Iterator
+from collections import deque
+
+from tree_sitter import Tree, Node, TreeCursor
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)
 _T_contra = TypeVar("_T_contra", contravariant=True)
+
+CodeT = str | bytes | Tree | Node | Path
+
+
+def _normalize_code(code: CodeT) -> bytes:
+    """Normalize code to bytes.
+
+    This function takes any shape of code representation and returns it as bytes.
+
+    Args:
+        code: The code-representing object to normalize.
+
+    Returns:
+        The normalized code as bytes.
+
+    Raises:
+        TypeError: If the code is not a valid type.
+    """
+    if isinstance(code, str):
+        return code.encode()
+    if isinstance(code, Path):
+        return code.read_bytes()
+    if isinstance(code, (Tree, Node)):
+        return code.text
+    if isinstance(code, bytes):
+        return code
+    raise TypeError(f"Invalid type for code: {type(code)}")
+
+
+def ts_traverse_bfs(target: Node | Tree) -> Iterator[tuple[Node, int]]:
+    """
+    Breadth-first traversal of a tree_sitter tree.
+
+    This generator function yields (node, depth) tuples in breadth-first order.
+    A deque data structure is used for the traversal, thus the traversal is performed in a non-recursive way.
+    Depth is reckoned as the count of edges from the tree's root to the node.
+
+    Args:
+        target: The cursor to use for traversing the tree.
+
+    Yields:
+        A tuple that contains the node and its respective depth from the root.
+    """
+    cursor = target.walk()
+    # (cursor_position, depth)
+    queue = deque[tuple[TreeCursor, int]]([(cursor.copy(), 0)])
+
+    while queue:
+        cursor, depth = queue.popleft()
+        yield cursor.node, depth
+
+        if cursor.goto_first_child():
+            queue.append((cursor.copy(), depth + 1))
+
+            while cursor.goto_next_sibling():
+                queue.append((cursor.copy(), depth + 1))
+
+            cursor.goto_parent()
 
 
 def _add_predicate_attributes(
