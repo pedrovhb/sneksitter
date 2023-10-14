@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "sneksitter"
+version = "0.1.0"
+description = ""
+authors = ["Pedro Batista <pedrovhb@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+tree-sitter = "^0.20.2"
+tree-sitter-languages = "^1.7.0"
+rich = {version = "^13.6.0", extras = ["rich,all"]}
+
+
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.331"
+black = "^23.9.1"
+usort = "^1.0.7"
+pytest = "^7.4.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
