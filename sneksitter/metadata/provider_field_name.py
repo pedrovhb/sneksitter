@@ -1,11 +1,11 @@
 from tree_sitter import Tree, TreeCursor
 
-from sneksitter.metadata.base import MetadataProvider
+from sneksitter.metadata.base_provider import MetadataProvider
 
 
 class FieldNameMetadataProvider(MetadataProvider[str]):
     def resolve(self, tree: Tree) -> dict[int, str]:
-        """Compute and store metadata for nodes in `self.metadata` dictionary."""
+        """Compute and store provider for nodes in `self.provider` dictionary."""
         metadata: dict[int, str] = {}
 
         def _walk(cursor: TreeCursor) -> None:
@@ -29,7 +29,9 @@ if __name__ == "__main__":
 
     metadata = FieldNameMetadataProvider().resolve(tree)
 
-    print({node_id: field_name for node_id, field_name in metadata.items() if field_name})
+    print(
+        {node_id: field_name for node_id, field_name in metadata.items() if field_name}
+    )
     # {
     #   39275992: 'name',
     #   39276000: 'parameters',

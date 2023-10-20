@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, NamedTuple
 
 from tree_sitter import Node, Tree, Parser
@@ -31,14 +32,26 @@ class BaseTransformer(BaseVisitor):
         if return_value:
             self.add_replacement(original_node, return_value)
 
-    @classmethod
-    def transform(cls, tree: Tree, parser: Parser) -> Tree:
-        """Class method to traverse the tree and call the visitor's methods."""
-        transformer = cls.traverse_tree(tree, parser=parser)
-        return transformer._transform(tree)
+    # def transform(self, tree: Tree, parser: Parser) -> Tree:
+    #     """Class method to traverse the tree and call the visitor's methods."""
 
-    def _transform(self, tree: Tree) -> Tree:
+    def transform(
+        self,
+        tree: Tree | str | bytes | Path,
+        do_traverse: bool = True,
+    ) -> Tree:
         """Transform the tree."""
+
+        if isinstance(tree, str):
+            tree = tree.encode()
+        elif isinstance(tree, Path):
+            tree = tree.read_bytes()
+
+        if isinstance(tree, bytes):
+            tree = self._parser.parse(tree)
+
+        if do_traverse:
+            self.traverse(tree)
         source = tree.text
         replacements = sorted(
             self._replacements.values(),

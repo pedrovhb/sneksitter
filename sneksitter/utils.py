@@ -42,19 +42,23 @@ def _normalize_code(code: CodeT) -> bytes:
     raise TypeError(f"Invalid type for code: {type(code)}")
 
 
-def ts_traverse_bfs(target: Node | Tree) -> Iterator[tuple[Node, int]]:
+def ts_traverse_bfs(
+    target: Node | Tree,
+    yield_filter: Callable[[Node], bool] | None = None,
+) -> Iterator[tuple[Node, int]]:
     """
     Breadth-first traversal of a tree_sitter tree.
 
-    This generator function yields (node, depth) tuples in breadth-first order.
+    This generator function yields (target_node, depth) tuples in breadth-first order.
     A deque data structure is used for the traversal, thus the traversal is performed in a non-recursive way.
-    Depth is reckoned as the count of edges from the tree's root to the node.
+    Depth is reckoned as the count of edges from the tree's root to the target_node.
 
     Args:
         target: The cursor to use for traversing the tree.
+        yield_filter: A function that takes a target_node and returns True if the target_node should be yielded.
 
     Yields:
-        A tuple that contains the node and its respective depth from the root.
+        A tuple that contains the target_node and its respective depth from the root.
     """
     cursor = target.walk()
     # (cursor_position, depth)
@@ -62,7 +66,8 @@ def ts_traverse_bfs(target: Node | Tree) -> Iterator[tuple[Node, int]]:
 
     while queue:
         cursor, depth = queue.popleft()
-        yield cursor.node, depth
+        if yield_filter is None or yield_filter(cursor.node):
+            yield cursor.node, depth
 
         if cursor.goto_first_child():
             queue.append((cursor.copy(), depth + 1))
@@ -80,9 +85,9 @@ def _add_predicate_attributes(
     """Decorator to add predicate attributes to a method, used for @on_leave and @on_visit.
 
     This can be added to BaseVisitor and BaseTransformer subclass methods in order to register
-    a function to be called when a node matches a given predicate. The decorated method will be
-    called when the node is left, and the return value of the decorated method will be used
-    to replace the node in the tree, if a string or bytes is returned.
+    a function to be called when a target_node matches a given predicate. The decorated method will be
+    called when the target_node is left, and the return value of the decorated method will be used
+    to replace the target_node in the tree, if a string or bytes is returned.
 
     The predicates are added as attributes of the replaced function, and the classes will
     register them when the class is defined via __init_subclass__.

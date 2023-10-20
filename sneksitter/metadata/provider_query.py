@@ -2,7 +2,7 @@ from pathlib import Path
 
 from tree_sitter import Tree, Language
 
-from sneksitter.metadata.base import MetadataProvider
+from sneksitter.metadata.base_provider import MetadataProvider
 from sneksitter.utils import ts_traverse_bfs
 
 
@@ -13,7 +13,7 @@ class QueryTagMetadataProvider(MetadataProvider[str]):
         self.language = language
 
     def resolve(self, tree: Tree) -> dict[int, str]:
-        """Compute and store metadata for nodes in `self.metadata` dictionary."""
+        """Compute and store provider for nodes in `self.provider` dictionary."""
         metadata: dict[int, str] = {}
         compiled_query = self.language.query(self.query)
         captures = compiled_query.captures(tree.root_node)
