@@ -13,6 +13,7 @@ from rich.text import Text
 from tree_sitter import Node, Tree
 
 from sneksitter.metadata import FieldNameMetadataProvider, MetadataProvider
+
 from sneksitter.q import Q
 from sneksitter.visitor import BaseVisitor
 
@@ -145,7 +146,7 @@ class RichTreeBuilder(BaseVisitor):
     def get_tree(self, tree: Tree) -> RichTree:
         """Class method to traverse the tree and call the visitor's methods."""
         self.traverse(tree)
-        # Add the predicate match key, if there are any predicate highlights
+        # Add the predicate match attr_path, if there are any predicate highlights
         if self.predicate_highlights:
             match_key = Group(
                 *(
@@ -192,9 +193,9 @@ if __name__ == "__main__":
 
     tree = parser.parse(textwrap.dedent(source).encode())
 
-    is_in_class = +Q(type="class_definition")
-    is_function = Q(type="function_definition")
-    is_method = is_in_class & is_function
+    is_method = Q(parent__type="class_definition", type="function_definition")
+    # is_function = Q(type="function_definition")
+    # is_method = is_in_class & is_function
 
     rich_tree = RichTreeBuilder(
         # lambda n: n.type == "identifier",
@@ -205,8 +206,8 @@ if __name__ == "__main__":
         # -Q(type="function_definition"),
         # -+Q(type="function_definition"),
         is_method,
-        is_function,
-        is_in_class,
+        # is_function,
+        # is_in_class,
         # ++Q(type="function_definition"),
     ).get_tree(tree)
 

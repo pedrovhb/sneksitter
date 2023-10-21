@@ -10,7 +10,7 @@ from sneksitter.visitor import BaseVisitor
 
 
 class BaseTransformer(BaseVisitor):
-    def __init__(self, parser: Parser) -> None:
+    def __init__(self, parser: int) -> None:
         super().__init__()
         self._parser = parser
         self._replacements = dict[int, NodeReplacement]()

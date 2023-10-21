@@ -4,7 +4,7 @@ from pathlib import Path
 from tree_sitter import Node
 from tree_sitter_languages import get_parser
 
-from sneksitter.q import Q
+# from sneksitter.q import Q
 from sneksitter.transformer import BaseTransformer
 from sneksitter.utils import on_visit
 

@@ -1,265 +1,223 @@
 from __future__ import annotations
 
-from __future__ import annotations
-from copy import deepcopy
-import re
-from typing import List, Callable, Union, Iterator, TypeVar, Pattern
+import operator
+from dataclasses import dataclass, field
+from functools import partialmethod
+from typing import Generic, Callable, TypeVar, Iterator
 
-T = TypeVar("T", bound="Q")
-
-
-class Node:
-    def __init__(self, type: str, text: str, parent: Node | None = None):
-        self.type: str = type
-        self.parent: Node | None = parent
-        self.text: str = text
-        self.children: List[Node] = []
-        if parent:
-            parent.children.append(self)
-
-    @classmethod
-    def from_dict(cls, data: dict, parent: Node | None = None) -> Node:
-        node = cls(data["type"], data["text"], parent)
-        for child in data.get("children", []):
-            cls.from_dict(child, node)
-        return node
-
-    def walk(self) -> Iterator[Node]:
-        yield self
-        for child in self.children:
-            yield from child.walk()
-
-    def __str__(self) -> str:
-        return f"Node(type='{self.type}', text='{self.text}')"
+_T_co = TypeVar("_T_co", covariant=True)
+_PredT = Callable[[_T_co], bool]
 
 
-class Q:
-    def __init__(self, *args: Callable[[Node], bool], **kwargs):
-        self.custom_funcs = args
-        self.query_attributes = kwargs
-        self.negate = False
-        self.ancestor = 0
-        self.descendant = 0
-        self.has_prev_sibling = None
-        self.has_next_sibling = None
-        self.has_any_prev_sibling = None
-        self.has_any_next_sibling = None
+class _LookupChain(Generic[_T_co], Callable[[_T_co], bool]):
+    """A lookup chain for a tree node."""
 
-    def _simple_match(
-        self, target_node: Node, key: str, value: Union[str, Pattern]
-    ) -> bool:
-        attr_value = getattr(target_node, key, None)
-        if isinstance(value, Pattern):
-            return bool(value.match(attr_value))
+    __slots__ = ("attribute_path", "predicate")
+
+    attribute_path: tuple[str, ...]
+    predicate: _PredT[_T_co]
+
+    def __init__(
+        self,
+        attribute_or_path: tuple[str, ...] | str,
+        predicate: _PredT[_T_co],
+    ) -> None:
+        # Split attribute or path
+        if isinstance(attribute_or_path, str):
+            attribute_path = attribute_or_path.split("__")
         else:
-            return attr_value == value
+            attribute_path = attribute_or_path
 
-    def matches(self, target_node: Node) -> bool:
-        base_match = all(func(target_node) for func in self.custom_funcs) and all(
-            self._simple_match(target_node, key, value)
-            for key, value in self.query_attributes.items()
-        )
+        self.predicate = predicate
+        self.attribute_path = attribute_path
 
-        if self.negate:
-            base_match = not base_match
+    def __call__(self, obj: _T_co) -> bool:
+        """Call the lookup chain on an object."""
+        for attribute in self.attribute_path:
+            obj = getattr(obj, attribute)
+        return self.predicate(obj)
 
-        return base_match
 
-    def __and__(self, other: Q) -> Q:
-        return self._combine(other, "and")
+class Q(Generic[_T_co]):
+    operators = {
+        "gt": operator.gt,
+        "lt": operator.lt,
+        "ge": operator.ge,
+        "gte": operator.ge,
+        "le": operator.le,
+        "lte": operator.le,
+        "eq": operator.eq,
+        "ne": operator.ne,
+        "contains": operator.contains,
+        "startswith": str.startswith,
+        "endswith": str.endswith,
+        "in": lambda x, y: x in y,
+        "not_in": lambda x, y: x not in y,
+        "is": operator.is_,
+        "is_not": operator.is_not,
+        "isinstance": isinstance,
+        "is_not_instance": lambda x, y: not isinstance(x, y),
+        "call": lambda x, y: y(x),
+        "check_pred": lambda x, y: y(x),
+    }
 
-    def __or__(self, other: Q) -> Q:
-        return self._combine(other, "or")
+    def __init__(
+        self,
+        *callable_predicates: _PredT[_T_co],
+        **attribute_lookup_predicates: _PredT[_T_co] | object,
+    ) -> None:
+        self._callable_predicates = list(callable_predicates)
+        for key, value in attribute_lookup_predicates.items():
+            attr_lookup_pred = self._build_attr_lookup_predicate(key, value)
+            self._callable_predicates.append(attr_lookup_pred)
 
-    def __invert__(self) -> Q:
-        new_q = deepcopy(self)
-        new_q.negate = not new_q.negate
-        return new_q
+    def _build_attr_lookup_predicate(
+        self,
+        attr_path: str,
+        value: _PredT[_T_co],
+    ) -> _PredT[_T_co]:
+        lookup_path = attr_path.split("__")
 
-    def __pos__(self) -> Q:
-        new_q = deepcopy(self)
-        new_q.ancestor += 1
-        return new_q
+        def _attr_lookup_predicate(obj: _T_co) -> bool:
+            sentinel = object()
+            for attribute in lookup_path[:-1]:
+                obj = getattr(obj, attribute, sentinel)
+            last_part = lookup_path[-1]
+            if last_part in self.operators:
+                return self.operators[last_part](obj, value)
+            else:
+                obj = getattr(obj, last_part, sentinel)
 
-    def __neg__(self) -> Q:
-        new_q = deepcopy(self)
-        new_q.descendant += 1
-        return new_q
+            # If the attribute is not found, return False
+            if obj is sentinel:
+                return False
 
-    def __lshift__(self, other: Q) -> Q:
-        new_q = deepcopy(self)
-        new_q.has_any_prev_sibling = other
-        return new_q
+            if callable(value):
+                return value(obj)
+            return obj == value
 
-    def __rshift__(self, other: Q) -> Q:
-        new_q = deepcopy(self)
-        new_q.has_any_next_sibling = other
-        return new_q
+        _attr_lookup_predicate.__name__ = f"_lookup_{attr_path}"
+        return _attr_lookup_predicate
 
-    def __gt__(self, other: Q) -> Q:
-        new_q = deepcopy(self)
-        new_q.has_prev_sibling = other
-        return new_q
+    def __call__(self, obj: _T_co) -> bool:
+        """Call the Q object on an object."""
+        return all(func(obj) for func in self._callable_predicates)
 
-    def __lt__(self, other: Q) -> Q:
-        new_q = deepcopy(self)
-        new_q.has_next_sibling = other
-        return new_q
+    def __and__(self, other: _PredT[_T_co]) -> Q[_T_co]:
+        return Q(self, other)
+
+    def __or__(self, other: _PredT[_T_co]) -> Q[_T_co]:
+        def _or(obj: _T_co) -> bool:
+            return self(obj) or other(obj)
+
+        return Q(_or)
+
+    def __xor__(self, other: _PredT[_T_co]) -> Q[_T_co]:
+        def _xor(obj: _T_co) -> bool:
+            return self(obj) ^ other(obj)
+
+        return Q(_xor)
+
+    def __invert__(self) -> Q[_T_co]:
+        def _invert(obj: _T_co) -> bool:
+            return not self(obj)
+
+        return Q(_invert)
+
+    def find(self, *objects: _T_co) -> Iterator[_T_co]:
+        for obj in objects:
+            if self(obj):
+                yield obj
 
     def __str__(self) -> str:
-        return f"Q({self.custom_funcs}, {self.query_attributes})"
+        return f"Q({self._callable_predicates})"
 
     def __repr__(self) -> str:
-        return self.__str__()
-
-    __call__ = matches
-
-    def _match_sibling_constraints(self, target_node: Node) -> bool:
-        parent = target_node.parent
-        if parent:
-            siblings = parent.children
-            index = siblings.index(target_node)
-            return all(
-                [
-                    self._match_immediate_prev_sibling(index, siblings),
-                    self._match_immediate_next_sibling(index, siblings),
-                    self._match_any_prev_sibling(index, siblings),
-                    self._match_any_next_sibling(index, siblings),
-                ]
-            )
-        return True
-
-    def _match_immediate_prev_sibling(self, index: int, siblings: List[Node]) -> bool:
-        if self.has_prev_sibling and index > 0:
-            prev_sibling = siblings[index - 1]
-            return self.has_prev_sibling.matches(prev_sibling)
-        return True
-
-    def _match_immediate_next_sibling(self, index: int, siblings: List[Node]) -> bool:
-        if self.has_next_sibling and index < len(siblings) - 1:
-            next_sibling = siblings[index + 1]
-            return self.has_next_sibling.matches(next_sibling)
-        return True
-
-    def _match_any_prev_sibling(self, index: int, siblings: List[Node]) -> bool:
-        if self.has_any_prev_sibling:
-            for prev_sibling in siblings[:index]:
-                if self.has_any_prev_sibling.matches(prev_sibling):
-                    return True
-            return False
-        return True
-
-    def _match_any_next_sibling(self, index: int, siblings: List[Node]) -> bool:
-        if self.has_any_next_sibling:
-            for next_sibling in siblings[index + 1 :]:
-                if self.has_any_next_sibling.matches(next_sibling):
-                    return True
-            return False
-        return True
-
-    def matches(self, target_node: Node) -> bool:
-        if not all(func(target_node) for func in self.custom_funcs):
-            return False
-
-        if not all(
-            self._simple_match(target_node, key, value)
-            for key, value in self.query_attributes.items()
-        ):
-            return False
-
-        if not self._match_sibling_constraints(target_node):
-            return False
-
-        return True
-
-    def _combine(self, other: T, op: str) -> T:
-        new_q = deepcopy(self)
-
-        if op == "and":
-            new_q.custom_funcs += other.custom_funcs
-            new_q.query_attributes.update(other.query_attributes)
-            new_custom_func = lambda node: self.matches(node) and other.matches(node)
-            new_q.custom_funcs += (new_custom_func,)
-
-        elif op == "or":
-            new_custom_func = lambda node: self.matches(node) or other.matches(node)
-            new_q.custom_funcs += (new_custom_func,)
-
-        elif op == "xor":
-            new_custom_func = lambda node: bool(self.matches(node)) ^ bool(
-                other.matches(node)
-            )
-            new_q.custom_funcs += (new_custom_func,)
-
-        return new_q
-
-    def __xor__(self, other: T) -> T:
-        return self._combine(other, "xor")
+        return f"Q({self._callable_predicates})"
 
 
-def find_matching_nodes(
-    root: Node, query: Q, first=False, last=False, nth=None
-) -> List[Node]:
-    matches = [node for node in root.walk() if query.matches(node)]
-    if first:
-        return matches[:1]
-    if last:
-        return matches[-1:]
-    if nth is not None:
-        return matches[nth : nth + 1]
-    return matches
+# class Q(Q):
+#     target_parent: bool = False
+#     target_ancestor: bool = False
+#
+#     target_child: bool = False
+#     target_descendant: bool = False
+#
+#     def __init__(
+#         self,
+#         *callable_predicates: _PredT[_T_co],
+#         target_parent: bool = False,
+#         target_ancestor: bool = False,
+#         target_child: bool = False,
+#         target_descendant: bool = False,
+#         **attribute_lookup_predicates: _PredT[_T_co] | object,
+#     ) -> None:
+#         super().__init__(*callable_predicates, **attribute_lookup_predicates)
+#
+#         self.target_parent = target_parent
+#         self.target_ancestor = target_ancestor
+#         self.target_child = target_child
+#         self.target_descendant = target_descendant
+#
+#     def __pos__(self) -> Q[_T_co]:
+#         def _pos(obj: _T_co) -> bool:
+#             return self(obj)
+#
+#         return Q(
+#             _pos,
+#             target_parent=True,
+#             target_ancestor=self.target_parent,  # If it's already a parent, it now becomes an ancestor; ++Q(...)
+#             target_child=self.target_child,
+#             target_descendant=self.target_descendant,
+#         )
+#
+#     def __neg__(self) -> Q[_T_co]:
+#         def _neg(obj: _T_co) -> bool:
+#             return self(obj)
+#
+#         return Q(
+#             _neg,
+#             target_parent=self.target_parent,
+#             target_ancestor=self.target_ancestor,
+#             target_child=True,
+#             target_descendant=self.target_child,  # If it's already a child, it now becomes a descendant; --Q(...)
+#         )
 
 
-sample_data = {
-    "type": "root",
-    "text": "root",
-    "children": [
-        {"type": "import_statement", "text": "import os", "children": []},
-        {
-            "type": "import_from_statement",
-            "text": "from sys import path",
-            "children": [],
-        },
-        {
-            "type": "function_definition",
-            "text": "def func():",
-            "children": [
-                {"type": "import_statement", "text": "import re", "children": []},
-                {"type": "expression", "text": "print('Hello')", "children": []},
-            ],
-        },
-    ],
-}
+if __name__ == "__main__":
+    q10 = Q(lambda x: x > 5, lambda x: x % 5 == 0)
+    assert (q10(10), q10(11)) == (True, False)
 
-# Create the root node using the sample data
-root_node = Node.from_dict(sample_data)
+    @dataclass
+    class Person:
+        name: str
+        age: int
+        job: str
+        friends: list[Person] = field(default_factory=list)
 
-# Display the root node and its descendants
-print("Root Node:")
-print(root_node)
-for n in root_node.walk():
-    print(n)
+        def __str__(self) -> str:
+            friends = ", ".join(repr(f.name) for f in self.friends)
+            return f"<Person {self.name=}, {self.age=}, {self.job=}, {friends=}]>"
 
+        __repr__ = __str__
 
-# Testing any sibling constraints
-any_prev_sibling_q = Q(type="import_statement") << Q(type="import_from_statement")
-any_next_sibling_q = Q(type="import_statement") >> Q(type="import_from_statement")
-immediate_prev_sibling_q = Q(type="import_statement") > Q(type="import_from_statement")
-immediate_next_sibling_q = Q(type="import_statement") < Q(type="import_from_statement")
+    people = [
+        a := Person("Alice", 20, "Developer"),
+        b := Person("Bob", 30, "Developer"),
+        c := Person("Charlie", 40, "Manager"),
+        d := Person("Dave", 23, "Manager"),
+        e := Person("Eve", 60, "CEO"),
+    ]
+    a.friends.extend([b, c, d, e])
+    b.friends.extend([a, c])
+    c.friends.extend([a, b, d])
+    d.friends.extend([a, c])
+    e.friends.extend([a])
 
-print("Nodes matching any previous sibling Q object:")
-print(find_matching_nodes(root_node, any_prev_sibling_q))
+    group_0 = Q(age__gt=25) & Q(job="Developer")
+    print(list(group_0.find(*people)))
+    assert list(group_0.find(*people)) == [b]
 
-print("Nodes matching any next sibling Q object:")
-print(find_matching_nodes(root_node, any_next_sibling_q))
-
-print("Nodes matching immediate previous sibling Q object:")
-print(find_matching_nodes(root_node, immediate_prev_sibling_q))
-
-print("Nodes matching immediate next sibling Q object:")
-print(find_matching_nodes(root_node, immediate_next_sibling_q))
-
-
-# Test &
-print("Nodes matching Q object with & operator:")
-Q(type="import_statement") & +Q(type="import_from_statement")
+    group_1 = (Q(age__gt=25) & Q(job="Developer")) | Q(job="Manager")
+    print(list(group_1.find(*people)))
+    assert list(group_1.find(*people)) == [b, c, d]
