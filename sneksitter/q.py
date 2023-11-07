@@ -45,9 +45,7 @@ class Q:
         self.has_any_prev_sibling = None
         self.has_any_next_sibling = None
 
-    def _simple_match(
-        self, target_node: Node, key: str, value: Union[str, Pattern]
-    ) -> bool:
+    def _simple_match(self, target_node: Node, key: str, value: Union[str, Pattern]) -> bool:
         attr_value = getattr(target_node, key, None)
         if isinstance(value, Pattern):
             return bool(value.match(attr_value))
@@ -186,9 +184,7 @@ class Q:
             new_q.custom_funcs += (new_custom_func,)
 
         elif op == "xor":
-            new_custom_func = lambda node: bool(self.matches(node)) ^ bool(
-                other.matches(node)
-            )
+            new_custom_func = lambda node: bool(self.matches(node)) ^ bool(other.matches(node))
             new_q.custom_funcs += (new_custom_func,)
 
         return new_q
@@ -197,9 +193,7 @@ class Q:
         return self._combine(other, "xor")
 
 
-def find_matching_nodes(
-    root: Node, query: Q, first=False, last=False, nth=None
-) -> List[Node]:
+def find_matching_nodes(root: Node, query: Q, first=False, last=False, nth=None) -> List[Node]:
     matches = [node for node in root.walk() if query.matches(node)]
     if first:
         return matches[:1]
@@ -210,56 +204,55 @@ def find_matching_nodes(
     return matches
 
 
-sample_data = {
-    "type": "root",
-    "text": "root",
-    "children": [
-        {"type": "import_statement", "text": "import os", "children": []},
-        {
-            "type": "import_from_statement",
-            "text": "from sys import path",
-            "children": [],
-        },
-        {
-            "type": "function_definition",
-            "text": "def func():",
-            "children": [
-                {"type": "import_statement", "text": "import re", "children": []},
-                {"type": "expression", "text": "print('Hello')", "children": []},
-            ],
-        },
-    ],
-}
+if __name__ == "__main__":
+    sample_data = {
+        "type": "root",
+        "text": "root",
+        "children": [
+            {"type": "import_statement", "text": "import os", "children": []},
+            {
+                "type": "import_from_statement",
+                "text": "from sys import path",
+                "children": [],
+            },
+            {
+                "type": "function_definition",
+                "text": "def func():",
+                "children": [
+                    {"type": "import_statement", "text": "import re", "children": []},
+                    {"type": "expression", "text": "print('Hello')", "children": []},
+                ],
+            },
+        ],
+    }
 
-# Create the root node using the sample data
-root_node = Node.from_dict(sample_data)
+    # Create the root root_node using the sample data
+    root_node = Node.from_dict(sample_data)
 
-# Display the root node and its descendants
-print("Root Node:")
-print(root_node)
-for n in root_node.walk():
-    print(n)
+    # Display the root root_node and its descendants
+    print("Root Node:")
+    print(root_node)
+    for n in root_node.walk():
+        print(n)
 
+    # Testing any sibling constraints
+    any_prev_sibling_q = Q(type="import_statement") << Q(type="import_from_statement")
+    any_next_sibling_q = Q(type="import_statement") >> Q(type="import_from_statement")
+    immediate_prev_sibling_q = Q(type="import_statement") > Q(type="import_from_statement")
+    immediate_next_sibling_q = Q(type="import_statement") < Q(type="import_from_statement")
 
-# Testing any sibling constraints
-any_prev_sibling_q = Q(type="import_statement") << Q(type="import_from_statement")
-any_next_sibling_q = Q(type="import_statement") >> Q(type="import_from_statement")
-immediate_prev_sibling_q = Q(type="import_statement") > Q(type="import_from_statement")
-immediate_next_sibling_q = Q(type="import_statement") < Q(type="import_from_statement")
+    print("Nodes matching any previous sibling Q object:")
+    print(find_matching_nodes(root_node, any_prev_sibling_q))
 
-print("Nodes matching any previous sibling Q object:")
-print(find_matching_nodes(root_node, any_prev_sibling_q))
+    print("Nodes matching any next sibling Q object:")
+    print(find_matching_nodes(root_node, any_next_sibling_q))
 
-print("Nodes matching any next sibling Q object:")
-print(find_matching_nodes(root_node, any_next_sibling_q))
+    print("Nodes matching immediate previous sibling Q object:")
+    print(find_matching_nodes(root_node, immediate_prev_sibling_q))
 
-print("Nodes matching immediate previous sibling Q object:")
-print(find_matching_nodes(root_node, immediate_prev_sibling_q))
+    print("Nodes matching immediate next sibling Q object:")
+    print(find_matching_nodes(root_node, immediate_next_sibling_q))
 
-print("Nodes matching immediate next sibling Q object:")
-print(find_matching_nodes(root_node, immediate_next_sibling_q))
-
-
-# Test &
-print("Nodes matching Q object with & operator:")
-Q(type="import_statement") & +Q(type="import_from_statement")
+    # Test &
+    print("Nodes matching Q object with & operator:")
+    Q(type="import_statement") & +Q(type="import_from_statement")

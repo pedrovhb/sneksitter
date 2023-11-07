@@ -1,0 +1,15 @@
+
+class {{ base_node_cls_name }}(BaseGenericNode):
+    language: T_ClassVar[str] = {{ language_name|safe|tojson }}
+{#    original_node_type: T_ClassVar[str]#}
+{#    original_grammar_id: T_ClassVar[int]#}
+
+    original_node: TS_Node | None
+
+    NODE_MAPPING: T_ClassVar[Dict[str, Type[BaseGenericNode]]] = {}
+
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        {{ base_node_cls_name }}.NODE_MAPPING[cls._key] = cls
+
+

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import argparse
 import colorsys
 import inspect
 import random
+import sys
 import textwrap
 from pathlib import Path
 from typing import TypeVar, Type, Callable, Hashable, NamedTuple
@@ -55,49 +57,14 @@ def _random_color_for_value(value: Hashable, hue_split: int = 12) -> str:
     return f"#{int(rgb[0] * 255):02x}{int(rgb[1] * 255):02x}{int(rgb[2] * 255):02x}"
 
 
-class _PredicateHighlight(NamedTuple):
-    """A predicate highlight for a tree node."""
-
-    predicate: Callable[[Node], bool]
-    color: str
-
-    @classmethod
-    def from_value(
-        cls,
-        value: Callable[[Node], bool],
-        idx: int = 0,
-    ) -> _PredicateHighlight:
-        """Create a predicate highlight from a value."""
-        color = _random_color_for_value(value) if isinstance(value, Hashable) else idx
-        return cls(predicate=value, color=color)
-
-    def get_predicate_display(self) -> str:
-        """Get the display for the predicate."""
-
-        name = getattr(self.predicate, "__name__", None)
-
-        if name == "<lambda>":
-            return inspect.getsource(self.predicate).strip()
-        if name is not None:
-            return name
-        return repr(self.predicate)
-
-
 class RichTreeBuilder(BaseVisitor):
-    named_only = False
-    METADATA_PROVIDERS = (FieldNameMetadataProvider,)
-
-    def __init__(self, *predicate_highlights: Callable[[Node], bool]) -> None:
-        super().__init__()
-        self._tree: RichTree = RichTree("root")
-        self._stack: list[RichTree] = [self._tree]
-
-        self.predicate_highlights = [
-            _PredicateHighlight.from_value(pred, i)
-            for i, pred in enumerate(predicate_highlights)
-        ]
-
     show_node_text_types = {"identifier", "string", "number", "attribute"}
+
+    def __init__(self, tree: Tree) -> None:
+        super().__init__(tree)
+        self._rich_tree: RichTree = RichTree("root")
+        self._stack: list[RichTree] = [self._rich_tree]
+        self._field_name_provider = FieldNameMetadataProvider()
 
     def _add_node(self, node_display: ConsoleRenderable) -> None:
         prev = self._stack[-1]
@@ -122,8 +89,8 @@ class RichTreeBuilder(BaseVisitor):
             Text(node.type, style=match_color),
         ]
 
-        # if (interval_data := provider.get(FieldNameMetadataProvider)) is not None:
-        #     parts.append(Text(f" [{interval_data}]", style="green"))
+        # if (field_name := provider.get(FieldNameMetadataProvider)) is not None:
+        #     parts.append(Text(f" [{field_name}]", style="green"))
         if node.type in self.show_node_text_types:
             parts.append(
                 Text(
@@ -142,76 +109,101 @@ class RichTreeBuilder(BaseVisitor):
     def leave(self, node: Node) -> None:
         self._stack.pop()
 
-    def get_tree(self, tree: Tree) -> RichTree:
-        """Class method to traverse the tree and call the visitor's methods."""
-        self.traverse(tree)
-        # Add the predicate match key, if there are any predicate highlights
-        if self.predicate_highlights:
-            match_key = Group(
-                *(
-                    Text(
-                        f"● {pred.get_predicate_display()}",
-                        style=f"bold {pred.color}",
-                    )
-                    for pred in self.predicate_highlights
-                ),
+    def traverse(self, *args: object, **kwargs: object) -> _T:
+        super().traverse(*args, **kwargs)
+        return self._rich_tree
+
+
+language_map = {
+    ".py": "python",
+    ".pyi": "python",
+    ".pyw": "python",
+    ".js": "javascript",
+    ".jsx": "javascript",
+    ".ts": "typescript",
+    ".tsx": "typescript",
+    ".rs": "rust",
+    ".cpp": "c++",
+    ".h": "c++",
+    ".c": "c",
+    ".java": "java",
+    ".php": "php",
+    ".rb": "ruby",
+    ".cs": "csharp",
+    ".go": "go",
+    ".swift": "swift",
+    ".sh": "bash",
+    ".kt": "kotlin",
+    ".hs": "haskell",
+    ".lua": "lua",
+    ".r": "r",
+    ".pl": "perl",
+    ".m": "objective-c",
+    ".md": "markdown",
+    ".html": "html",
+    ".css": "css",
+    ".json": "json",
+    ".yaml": "yaml",
+    ".toml": "toml",
+    ".xml": "xml",
+    ".sql": "sql",
+    ".scala": "scala",
+    ".clj": "clojure",
+    ".jl": "julia",
+    ".rst": "rst",
+    ".tex": "latex",
+}
+
+
+def cli_tool() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "source",
+        help="The source code to parse",
+        type=Path,
+        default=Path("-"),
+    )
+    parser.add_argument("--language", "-l", help="The language to parse", default="auto")
+    parser.add_argument(
+        "--named-only",
+        help="Only show named nodes",
+        action="store_true",
+    )
+    args = parser.parse_args()
+
+    if args.language == "auto":
+        if args.source == Path("-"):
+            raise ValueError(
+                "Cannot automatically detect language when reading from stdin. "
+                "Please specify the language with the --language/-l option."
             )
-            self._tree.add(match_key)
-        return self._tree
 
+        source_path = Path(args.source.name)
+        suffix = source_path.suffixes[-1] if source_path.suffixes else ""
 
-if __name__ == "__main__":
+        args.language = language_map.get(suffix)
+        if args.language is None:
+            raise ValueError(
+                f"Could not automatically detect language for file with extension {suffix}. "
+                "Please specify the language with the --language/-l option."
+            )
+    parser = tree_sitter_languages.get_parser(args.language)
+    if args.source == Path("-"):
+        contents = sys.stdin.buffer.read()
+    else:
+        contents = args.source.read_bytes()
+
+    tree = parser.parse(contents)
+    rich_tree = RichTreeBuilder(tree).traverse()
+
     import rich
-
-    parser = tree_sitter_languages.get_parser("python")
-
-    # source = Path(__file__).read_bytes()
-
-    source = """
-    from __future__ import annotations
-    
-    def foo(bar: int) -> None:
-        pass
-        
-    def closure_factory() -> Callable[[int], int]:
-        def closure(x: int) -> int:
-            return x + 1
-        return closure
-    
-    class Bar:
-        def __init__(self, x: int) -> None:
-            self.x = x
-            
-        async def with_closure(self) -> None:
-            closure = closure_factory()
-            def inner() -> None:
-                pass
-            inner()
-            return closure(1)
-    """
-
-    tree = parser.parse(textwrap.dedent(source).encode())
-
-    is_in_class = +Q(type="class_definition")
-    is_function = Q(type="function_definition")
-    is_method = is_in_class & is_function
-
-    rich_tree = RichTreeBuilder(
-        # lambda n: n.type == "identifier",
-        # Q(type="function_definition"),
-        # +Q(type="function_definition"),
-        # -Q(type="function_definition") & Q(type="identifier"),
-        # +Q(type="function_definition"),
-        # -Q(type="function_definition"),
-        # -+Q(type="function_definition"),
-        is_method,
-        is_function,
-        is_in_class,
-        # ++Q(type="function_definition"),
-    ).get_tree(tree)
 
     console = rich.get_console()
     console.print(rich_tree)
+
+
+if __name__ == "__main__":
+    cli_tool()
 
     # root
     # └── module

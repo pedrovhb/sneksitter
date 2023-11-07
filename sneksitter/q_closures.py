@@ -9,7 +9,7 @@ _PredT = Callable[[_T_co], bool]
 
 
 class _LookupChain(Generic[_T_co], Callable[[_T_co], bool]):
-    """A lookup chain for a tree node."""
+    """A lookup chain for a root_node root_node."""
 
     __slots__ = ("attribute_path", "predicate")
 

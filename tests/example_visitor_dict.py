@@ -6,7 +6,7 @@ from sneksitter.visitor import BaseVisitor
 
 
 class DictionaryBuilderVisitor(BaseVisitor):
-    """Build a dictionary from a tree."""
+    """Build a dictionary from a root_node."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -33,14 +33,14 @@ class DictionaryBuilderVisitor(BaseVisitor):
 
     @classmethod
     def tree_to_dict(cls, tree: Tree) -> dict:
-        """Class method to traverse the tree and call the visitor's methods."""
+        """Class method to traverse the root_node and call the visitor's methods."""
         visitor = cls()
         visitor.traverse(tree)
         return visitor.get_dict()
 
     @classmethod
     def tree_to_json(cls, tree: Tree) -> str:
-        """Class method to traverse the tree and call the visitor's methods."""
+        """Class method to traverse the root_node and call the visitor's methods."""
 
         return json.dumps(cls.tree_to_dict(tree), indent=4)
 

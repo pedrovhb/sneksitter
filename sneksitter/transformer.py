@@ -32,15 +32,15 @@ class BaseTransformer(BaseVisitor):
         if return_value:
             self.add_replacement(original_node, return_value)
 
-    # def transform(self, tree: Tree, parser: Parser) -> Tree:
-    #     """Class method to traverse the tree and call the visitor's methods."""
+    # def transform(self, root_node: Tree, parser: Parser) -> Tree:
+    #     """Class method to traverse the root_node and call the visitor's methods."""
 
     def transform(
         self,
         tree: Tree | str | bytes | Path,
         do_traverse: bool = True,
     ) -> Tree:
-        """Transform the tree."""
+        """Transform the root_node."""
 
         if isinstance(tree, str):
             tree = tree.encode()
@@ -55,7 +55,7 @@ class BaseTransformer(BaseVisitor):
         source = tree.text
         replacements = sorted(
             self._replacements.values(),
-            key=lambda r: (r.node.start_byte, -r.node.end_byte),
+            key=lambda r: (r.root_node.start_byte, -r.root_node.end_byte),
             reverse=True,
         )
         for node, replacement in replacements:

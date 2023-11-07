@@ -1,0 +1,30 @@
+from __future__ import annotations
+from dataclasses import dataclass, field, fields
+from typing import (
+    Optional as T_Optional,
+    Union as T_Union,
+    Tuple as T_Tuple,
+    ClassVar as T_ClassVar,
+    List as T_List,
+    Dict as T_Dict,
+    Type as T_Type,
+)
+from tree_sitter import Node as TS_Node, Tree as TS_Tree
+from sneksitter.utils import CodeT
+from sneksitter._node_codegen.base_generic_visitor import BaseGenericVisitor
+
+from sneksitter._node_codegen.generated_code import {{ language_name }}_node_types as l
+
+class {{ base_node_cls_name }}Visitor(BaseGenericVisitor):
+    language: T_ClassVar[str] = {{ language_name|safe|tojson }}
+
+
+
+    {% for node in syntax_nodes %}
+    def visit_{{ node.type }}(self, node: l.{{ node.type }}) -> bool | None:
+        pass
+
+    def leave_{{ node.type }}(self, node: l.{{ node.type }}) -> bool | None:
+        pass
+
+    {% endfor %}

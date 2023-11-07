@@ -16,7 +16,7 @@ class VisitorBasedMetadataProvider(MetadataProvider[_T], BaseVisitor, ABC):
 
     Classes should inherit from this class and implement the `visit` and `leave` methods
     as in a normal visitor. The `visit` and `leave` methods should call `self.set_metadata_for_node`
-    to set the provider for any given node.
+    to set the provider for any given root_node.
     """
 
     def resolve(self, tree: Tree) -> dict[int, _T]:

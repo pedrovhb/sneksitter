@@ -1,6 +1,10 @@
 from tree_sitter import Tree, TreeCursor
 
 from sneksitter.metadata.base_provider import MetadataProvider
+from sneksitter.utils import on_visit, on_leave
+from typing import TypeVar
+
+_T = TypeVar("_T")
 
 
 class FieldNameMetadataProvider(MetadataProvider[str]):
@@ -29,9 +33,7 @@ if __name__ == "__main__":
 
     metadata = FieldNameMetadataProvider().resolve(tree)
 
-    print(
-        {node_id: field_name for node_id, field_name in metadata.items() if field_name}
-    )
+    print({node_id: field_name for node_id, field_name in metadata.items() if field_name})
     # {
     #   39275992: 'name',
     #   39276000: 'parameters',
@@ -40,3 +42,39 @@ if __name__ == "__main__":
     #   39274640: 'value',
     #   39276024: 'body'
     # }
+
+    from sneksitter import BaseVisitor
+    from tree_sitter import Node, Tree
+    from tree_sitter_languages import get_parser
+    from pathlib import Path
+
+    class DefinitionNameShower(BaseVisitor[dict[str, dict]]):
+        METADATA_PROVIDERS = (FieldNameMetadataProvider,)
+
+        def __init__(self, tree: Tree) -> None:
+            super().__init__(tree)
+            self._definitions_stack = []
+            self._definitions_tree = {}
+
+        def traverse(self, *args: object, **kwargs: object) -> _T:
+            super().traverse(*args, **kwargs)
+            return self._definitions_tree
+
+        @on_visit(
+            lambda node, visitor: visitor[FieldNameMetadataProvider, node] == "name",
+            parent__type=lambda t: t in ("class_definition", "function_definition"),
+        )
+        def visit_definition_name(self, node: Node) -> None:
+            pass
+
+        @on_leave(
+            lambda node, visitor: visitor[FieldNameMetadataProvider, node] == "name",
+            parent__type=lambda t: t in ("class_definition", "function_definition"),
+        )
+        def leave_definition_name(self, node: Node) -> None:
+            pass
+
+    parser = get_parser("python")
+    tree = parser.parse(Path(__file__).read_bytes())
+    print(DefinitionNameShower(tree).traverse())
+    print(DefinitionNameShower(tree).traverse())
