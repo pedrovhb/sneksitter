@@ -1,0 +1,15 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Sympy and SciPy Features.md
+heading_stack: <root> -> 978f4ae8-446b-44eb-a6e1-e6e14d2d360f -> System -> 29d455d7-aacc-4725-b3ef-918114effb01 -> System -> aaa2e7d9-3bdd-4fad-911a-31b12dc2a648 -> User
+---
+# User
+
+What are some of the neatest features of sympy and scipy?
+
+[child ⬇️](#8538284c-0352-43f1-8abc-46b21e1b06e8)
+
+---
+
+(main branch ⎇)
+###### 8538284c-0352-43f1-8abc-46b21e1b06e8
+[parent ⬆️](#aaa2e7d9-3bdd-4fad-911a-31b12dc2a648)

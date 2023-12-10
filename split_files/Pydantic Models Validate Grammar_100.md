@@ -1,0 +1,66 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Pydantic Models Validate Grammar.md
+heading_stack: <root> -> 061eaf6e-d372-4cb3-89fb-2c4a94f643f6 -> System -> cc0cd000-c5d4-4660-bc2e-8fe013b3c090 -> System -> aaa29d07-977b-4c5b-84ea-2dbd6660aa55 -> User -> Basic Info -> Internal Nodes -> Task -> a59e5ca8-0836-43aa-95ae-557da12f334d -> Tool -> df057f39-09fe-452a-a373-0e8af0517ed8 -> Assistant -> eac7e948-a00f-48dc-9291-b50e427443d8 -> Tool -> 269ca8b2-1769-4ac8-8a5d-deb74bea2c07 -> Assistant -> f12a4d59-1929-403d-abba-eb91897bd209 -> Assistant -> 7a1efd11-fe1f-45ce-8b70-9980dd6701b5 -> Tool -> d2cd1215-a1ae-4c2a-b2e0-8fdba68f2e90 -> Assistant -> a37fa0ec-cfd0-4c94-9569-4b2f95e88c3b -> Assistant -> 2cc0efdf-d6d5-4231-bbfc-49f199cba9b3 -> Tool -> 1a5fb753-2396-462e-8a40-245073e84638 -> Assistant -> aaa214e6-f126-4374-aa7a-a864d4a4a650 -> User -> c9a1a2b6-9829-4136-84a4-7fb52290ecc2 -> Assistant -> 0aac7ebc-176b-4f59-8385-8754815705e0 -> Tool -> 90c0afda-35b5-4d6c-b767-652a10ec7009 -> Assistant -> aaa251f8-f462-4594-a7f4-5110ef19aa88 -> User -> 6f4a1dde-3ce3-4099-8dba-56f8f2ecce2e -> Assistant -> 06d698da-0d98-48ba-8744-ea08aeb456a5 -> Tool -> 91c2c938-df80-4721-9821-48906b31862c -> Assistant -> aaa2bc5d-a4c0-4982-907a-b33f5407edf6 -> User -> a2c08485-4965-42e5-9297-a02f55ebe428 -> Assistant -> adbaeae2-7686-4bd8-a984-217f8adb12f8 -> Tool -> 8fd7c313-58e6-4151-b647-c80fa34c4a77 -> Assistant -> aaa23544-1053-4bfa-8cd2-0ee10a09de03 -> User -> e3569785-9e36-4f56-b9f4-aac6c4ece636 -> Assistant -> bff1d3d5-822f-4a91-a2d9-475d5930d718 -> Tool -> b9a775e9-19be-40dd-8b3e-e0052d643237 -> Assistant -> b2094f78-f968-4f15-b6e8-00bbbaeae587 -> Assistant -> ecb86225-1d3e-4cae-9dd8-85be28ea1405 -> Tool -> f25a9b3e-1b38-47e9-9018-42bb6bf7bb6a -> Assistant -> aaa20921-bbd5-452a-ad2c-99306efcc68e -> User -> Basic Info -> Internal Nodes -> Task -> aaa2b331-588c-4763-af86-083520fde6d3 -> User -> a3cc112f-e10c-47bb-bd4b-87633a842c3d -> Assistant -> 9712eaec-58a8-46ae-ba70-05a87f6e53e0 -> Assistant -> 02586475-71f2-4d89-9e5a-b36814539eec -> Tool -> b0f3fa0d-f604-48eb-9211-28d8e99cbed0 -> Assistant -> c01dfe43-9ddc-4f0e-b603-2dd7e2405323 -> Assistant -> 2f87adc9-039f-4800-b410-7ba4389079ac -> Tool -> 67f4c6a9-4141-4a35-9874-237d650290c8 -> Assistant -> 1436b560-084e-4d62-a7e7-d1b56a3a5cc2 -> Assistant -> 32a3c7fe-b183-418a-aaf2-3ab45bffa22b -> Tool -> d36a0c35-d4b3-4b21-8bac-ace4f536d72e -> Assistant -> `rules` Section -> `supertypes` Section -> aaa2206a-7c77-4ff9-99e6-1101968948e0 -> User -> 41eee36a-5646-44d4-a1da-7d9b229978dc -> Assistant
+---
+# Assistant
+
+```python
+from dataclasses import dataclass, field
+from typing import List, Union, Dict, Optional, Any
+
+# Dataclass for basic node info
+@dataclass
+class BasicInfo:
+    type: str
+    named: Optional[bool] = None
+
+# Dataclass for child type
+@dataclass
+class ChildType:
+    required: bool
+    multiple: bool
+    types: List[BasicInfo]
+
+# Dataclass for internal nodes
+@dataclass
+class InternalNode(BasicInfo):
+    fields: Dict[str, ChildType] = field(default_factory=dict)
+    children: Optional[ChildType] = None
+
+# Dataclass for supertype nodes
+@dataclass
+class SupertypeNode(BasicInfo):
+    subtypes: List[BasicInfo]
+
+# Combined dataclass to represent any node type
+NodeType = Union[BasicInfo, InternalNode, SupertypeNode]
+
+# Function to parse JSON object into corresponding dataclass instance
+def parse_node(json_obj: Dict[str, Any]) -> NodeType:
+    if 'subtypes' in json_obj:
+        return SupertypeNode(**json_obj)
+    elif 'fields' in json_obj or 'children' in json_obj:
+        if 'children' in json_obj:
+            json_obj['children'] = ChildType(**json_obj['children'])
+        for field_name, field_info in json_obj.get('fields', {}).items():
+            json_obj['fields'][field_name] = ChildType(**field_info)
+        return InternalNode(**json_obj)
+    else:
+        return BasicInfo(**json_obj)
+
+# Parse the 'rules' section into a list of NodeTypes
+parsed_rules = {rule_name: parse_node(rule_info) for rule_name, rule_info in grammar_data['rules'].items()}
+
+# Parse the 'supertypes' section, assuming it is just a list of BasicInfo
+parsed_supertypes = [BasicInfo(type=supertype, named=True) for supertype in grammar_data.get('supertypes', [])]
+
+parsed_rules, parsed_supertypes[:5]
+```
+
+[child ⬇️](#c9c1b5bd-4e6a-434d-9e33-55de74218cb4)
+
+---
+
+(main branch ⎇)
+###### c9c1b5bd-4e6a-434d-9e33-55de74218cb4
+[parent ⬆️](#41eee36a-5646-44d4-a1da-7d9b229978dc)

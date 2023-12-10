@@ -5,7 +5,7 @@ from typing import Any, NamedTuple
 
 from tree_sitter import Node, Tree, Parser
 
-from sneksitter.utils import CodeT, _normalize_code
+from sneksitter.utils import CodeT, normalize_code
 from sneksitter.visitor import BaseVisitor
 
 
@@ -19,7 +19,7 @@ class BaseTransformer(BaseVisitor):
         if node.id in self._replacements:
             raise ValueError(f"Node {node} already has a replacement")
 
-        replacement_code = _normalize_code(replacement_code)
+        replacement_code = normalize_code(replacement_code)
         replacement = NodeReplacement(node=node, replacement=replacement_code)
         self._replacements[node.id] = replacement
 

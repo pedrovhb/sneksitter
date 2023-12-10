@@ -1,0 +1,43 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Build Networkx Graph with Cursor.md
+heading_stack: <root> -> 9454ce70-1f14-454c-b6d4-dc8e17388ae1 -> System -> cdc1e4df-6ed9-4474-aa70-316fd1d37354 -> System -> aaa2cfbd-357a-4571-8976-96badef48d18 -> User -> 660d2f56-57b7-4db7-a86f-6e27fd55def8 -> Assistant -> aaa2f53f-301b-417c-b7ee-ff3a213ff44f -> User -> f88bf305-bb2b-49d3-8c39-93884f395670 -> Assistant -> d19608c1-cf76-442e-8eab-86807320e37d -> Tool -> 6cb2143c-6833-483e-81c3-0d5c2c20c84a -> Assistant -> 51b0898f-7e88-4c13-b0c8-bbb7f8e79c51 -> Assistant
+---
+# Assistant
+
+```python
+# Debugging the traversal logic by resetting the cursor and graph
+cursor = TraversalCursor(nested_data)
+G.clear()
+
+def build_tree_debug(cursor: TraversalCursor, graph: nx.DiGraph, current_node: Optional[str] = None):
+    if current_node is None:
+        current_node = cursor.current_node['name']
+    
+    graph.add_node(current_node)
+    
+    if cursor.go_to_first_child():
+        child = cursor.current_node['name']
+        graph.add_node(child)
+        graph.add_edge(current_node, child)
+        build_tree_debug(cursor, graph, child)
+        
+        while cursor.go_to_next_sibling():
+            sibling = cursor.current_node['name']
+            graph.add_node(sibling)
+            graph.add_edge(current_node, sibling)
+            build_tree_debug(cursor, graph, sibling)
+        
+        cursor.go_to_parent()
+
+# Run the debug function
+build_tree_debug(cursor, G)
+G.nodes(), G.edges()
+```
+
+[child ⬇️](#fb7ae9bc-bb46-4c32-94d3-47dc0b2b5997)
+
+---
+
+(main branch ⎇)
+###### fb7ae9bc-bb46-4c32-94d3-47dc0b2b5997
+[parent ⬆️](#51b0898f-7e88-4c13-b0c8-bbb7f8e79c51)

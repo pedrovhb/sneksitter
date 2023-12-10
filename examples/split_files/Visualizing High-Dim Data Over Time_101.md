@@ -1,0 +1,5 @@
+### Categorical Summary
+
+| Column Name   |
+|---------------|
+

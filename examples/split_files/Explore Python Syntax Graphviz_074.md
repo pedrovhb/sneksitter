@@ -1,0 +1,71 @@
+# Tool
+
+```python
+[(None, 'end'),
+ (None, ';'),
+ (None, 'ALTER'),
+ (None, 'ANALYZE'),
+ (None, 'ATTACH'),
+ (None, 'BEGIN'),
+ (None, 'COMMIT'),
+ (None, 'CREATE'),
+ (None, 'DELETE'),
+ (None, 'DETACH'),
+ (None, 'DROP'),
+ (None, 'END'),
+ (None, 'EXPLAIN'),
+ (None, 'INSERT'),
+ (None, 'PRAGMA'),
+ (None, 'REINDEX'),
+ (None, 'RELEASE'),
+ (None, 'REPLACE'),
+ (None, 'ROLLBACK'),
+ (None, 'SAVEPOINT'),
+ (None, 'SELECT'),
+ (None, 'UPDATE'),
+ (None, 'VACUUM'),
+ (None, 'VALUES'),
+ (None, 'WITH'),
+ (None, '_whitespace'),
+ (None, '--'),
+ (None, '/*'),
+ (None, 'sql_stmt_list'),
+ (None, 'comment'),
+ (None, 'sql_stmt'),
+ (None, 'alter_table_stmt'),
+ (None, 'analyze_stmt'),
+ (None, 'attach_stmt'),
+ (None, 'begin_stmt'),
+ (None, 'commit_stmt'),
+ (None, 'create_index_stmt'),
+ (None, 'create_table_stmt'),
+ (None, 'create_trigger_stmt'),
+ (None, 'create_view_stmt'),
+ (None, 'create_virtual_table_stmt'),
+ (None, 'delete_stmt'),
+ (None, 'detach_stmt'),
+ (None, 'drop_index_stmt'),
+ (None, 'drop_table_stmt'),
+ (None, 'drop_trigger_stmt'),
+ (None, 'drop_view_stmt'),
+ (None, 'insert_stmt'),
+ (None, 'pragma_stmt'),
+ (None, 'reindex_stmt'),
+ (None, 'release_stmt'),
+ (None, 'rollback_stmt'),
+ (None, 'savepoint_stmt'),
+ (None, 'select_stmt'),
+ (None, 'update_stmt'),
+ (None, 'vacuum_stmt'),
+ (None, '_select_core'),
+ (None, 'with_clause'),
+ (None, 'sql_stmt_list_repeat1')]
+```
+
+[child ⬇️](#4dcd1b30-3854-4f51-8a5e-266c0a59bd14)
+
+---
+
+(main branch ⎇)
+###### 4dcd1b30-3854-4f51-8a5e-266c0a59bd14
+[parent ⬆️](#e534f1c3-b20f-46c2-80e0-64bcc165c5a1)

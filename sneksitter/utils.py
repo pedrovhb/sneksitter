@@ -3,6 +3,7 @@ from __future__ import annotations
 import operator
 import re
 import textwrap
+import tree_sitter
 from collections import deque
 from functools import partial, wraps
 from pathlib import Path
@@ -10,6 +11,7 @@ from typing import Callable, ParamSpec, TypeVar, Iterator
 from collections import deque
 
 from tree_sitter import Tree, Node, TreeCursor
+from tree_sitter_languages import get_parser
 
 _P = ParamSpec("_P")
 _T = TypeVar("_T")
@@ -19,7 +21,7 @@ _T_contra = TypeVar("_T_contra", contravariant=True)
 CodeT = str | bytes | Tree | Node | Path
 
 
-def _normalize_code(code: CodeT) -> bytes:
+def normalize_code(code: CodeT) -> bytes:
     """Normalize code to bytes.
 
     This function takes any shape of code representation and returns it as bytes.
@@ -205,3 +207,136 @@ def get_indentation_from_node(tree, node, code: str):
     statement_line = lines[line_number - 1]
     indentation = len(statement_line) - len(statement_line.lstrip())
     return textwrap.indent(code, " " * indentation)
+
+
+NodeKey = tuple[str, bool]
+_BaseTypeStructureInternal = dict[NodeKey, set[NodeKey]]
+BaseTypeStructure = dict[NodeKey, frozenset[NodeKey]]
+
+
+def construct_base_type_structure(node_types: List[Dict]) -> BaseTypeStructure:
+    """
+    Constructs a structure mapping each node type to its direct base types.
+
+    Args:
+        node_types (List[Dict]): A list of dictionaries describing node types and their subtypes.
+
+    Returns:
+        BaseTypeStructure: A dictionary mapping each node type (identified by a tuple of type and named status)
+                           to its set of direct base types.
+    """
+    base_types: _BaseTypeStructureInternal = {}
+
+    for node in node_types:
+        if "subtypes" in node:
+            for subtype in node["subtypes"]:
+                key: NodeKey = (subtype["type"], subtype.get("named", False))
+                base_type_key: NodeKey = (node["type"], node.get("named", False))
+                if key not in base_types:
+                    base_types[key] = set()
+                base_types[key].add(base_type_key)
+
+    base_types_frozen: BaseTypeStructure = {
+        node_key: frozenset(base_type_keys) for node_key, base_type_keys in base_types.items()
+    }
+    return base_types_frozen
+
+
+def position_for_offset(input_bytes: bytes, offset: int) -> tuple[int, int]:
+    """
+
+
+    Notes:
+        Adapted from:
+
+            pub fn position_for_offset(input: &[u8], offset: usize) -> Result<Point> {
+                if offset > input.len() {
+                    return Err(anyhow!("Failed to address an offset: {offset}"));
+                }
+                let mut result = Point { row: 0, column: 0 };
+                let mut last = 0;
+                for pos in memchr::memchr_iter(b'\n', &input[..offset]) {
+                    result.row += 1;
+                    last = pos;
+                }
+                result.column = if result.row > 0 {
+                    offset - last - 1
+                } else {
+                    offset
+                };
+                Ok(result)
+            }
+    """
+    if offset > len(input_bytes):
+        raise ValueError()
+
+
+def edit_node(tree: Tree, node: Node, new_code: bytes) -> Tree:
+    """
+
+    Args:
+        tree:
+        node:
+        new_code:
+
+    Returns:
+
+    Notes:
+        Adapted from the following tree-sitter code:
+
+            pub fn perform_edit(tree: &mut Tree, input: &mut Vec<u8>, edit: &Edit) -> Result<InputEdit> {
+                let start_byte = edit.position;
+                let old_end_byte = edit.position + edit.deleted_length;
+                let new_end_byte = edit.position + edit.inserted_text.len();
+                let start_position = position_for_offset(input, start_byte)?;
+                let old_end_position = position_for_offset(input, old_end_byte)?;
+                input.splice(start_byte..old_end_byte, edit.inserted_text.iter().cloned());
+                let new_end_position = position_for_offset(input, new_end_byte)?;
+                let edit = InputEdit {
+                    start_byte,
+                    old_end_byte,
+                    new_end_byte,
+                    start_position,
+                    old_end_position,
+                    new_end_position,
+                };
+                tree.edit(&edit);
+                Ok(edit)
+            }
+
+    """
+
+
+def position_for_offset(input_bytes: bytes, offset: int) -> tuple[int, int]:
+    if offset > len(input_bytes):
+        raise ValueError("Offset is greater than input length.")
+    row = 0
+    last_newline_position = 0
+    for i, b in enumerate(input_bytes[:offset]):
+        if b == ord("\n"):
+            row += 1
+            last_newline_position = i
+    column = offset - (last_newline_position + 1)
+    return row, column
+
+
+def edit_node(tree: Tree, node: Node, new_code: bytes) -> Tree:
+    start_byte = node.start_byte
+    old_end_byte = node.end_byte
+    new_end_byte = start_byte + len(new_code)
+
+    start_position = position_for_offset(tree.root_node.text, start_byte)
+    old_end_position = position_for_offset(tree.root_node.text, old_end_byte)
+    new_end_position = position_for_offset(tree.root_node.text, new_end_byte)
+
+    tree.edit(
+        start_byte=start_byte,
+        old_end_byte=old_end_byte,
+        new_end_byte=new_end_byte,
+        start_point=start_position,
+        old_end_point=old_end_position,
+        new_end_point=new_end_position,
+    )
+
+    # tree.edit(edit)
+    return tree

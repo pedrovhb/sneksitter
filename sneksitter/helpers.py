@@ -3,7 +3,7 @@ from tree_sitter import Parser, Node
 from tree_sitter_languages import get_parser
 
 from sneksitter.transformer import BaseTransformer
-from sneksitter.utils import CodeT, _normalize_code
+from sneksitter.utils import CodeT, normalize_code
 
 
 def parse_template_expression(
@@ -52,15 +52,11 @@ if __name__ == "__main__":
                 print(f"Found identifier {node.text.decode()}")
                 if sub := self.substitutions.get(node.text.decode()):
                     return sub
-                raise ValueError(
-                    f"Could not find substitution for {node.text.decode()}"
-                )
+                raise ValueError(f"Could not find substitution for {node.text.decode()}")
             return None
 
     parser = get_parser("python")
-    transformer = TemplateTransformer(
-        parser, {"cls_name": "Foo", "cls_attributes": "bar: int"}
-    )
+    transformer = TemplateTransformer(parser, {"cls_name": "Foo", "cls_attributes": "bar: int"})
     tree = parser.parse(template_expression_cls.encode())
     transformer.traverse(tree.walk())
     print(tree.root_node.text.decode())

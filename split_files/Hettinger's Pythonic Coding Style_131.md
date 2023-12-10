@@ -1,0 +1,41 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Hettinger's Pythonic Coding Style.md
+heading_stack: <root> -> 1d52d5fe-beae-4acc-be0e-910c2784c842 -> System -> 990cbfc8-f01c-4465-94d6-e8a9d6fea7b5 -> System -> aaa237dc-dc1e-4222-abfc-c36e07f03dac -> User -> 776fab5c-cc53-47a1-93dc-69a27010cdb2 -> Assistant -> aaa247ef-988b-49a9-9915-daf574ce71f4 -> User -> eeb04c84-cace-44d7-bbf4-3e7201f1b820 -> Assistant -> Table of Contents -> aaa2a5cc-949d-4e45-a2d0-6bec76f30b74 -> User -> 33a36459-de59-441a-b57c-b1d27d5bbad4 -> Assistant -> Futures -> 605be0ce-7fc0-47d8-8fef-58ca8a49c65f -> Assistant -> 0c6dc032-3a73-440d-914f-c72664028d9b -> Tool -> aaa454d4-0532-474b-82f6-8154c1a7612c -> Assistant -> 3237308d-b095-4d08-9746-c7458657226d -> Assistant -> aaa20508-57a4-4965-ba67-5ed4ef91fb76 -> User -> 92fb49ad-feb6-4053-983d-6b162fdbab12 -> Assistant -> d8424461-3cf2-49ac-a5da-ab7a1ddf0f99 -> Tool -> 3618722f-01ac-47cd-a789-3b6a0c7129cf -> Assistant -> Basic Usage -> Common Use-Cases -> Under the Hood -> aaa24d5e-3e65-4629-b95b-4cabd8fd44e1 -> User -> bf752daf-e729-42d7-85c7-57076960e59a -> Assistant -> d324ef77-d01a-487e-ad43-806693056408 -> Tool -> 3c13d1e9-f19f-4d1b-8cc5-134da804ac7d -> Assistant -> Advanced Usage -> Common Use-Cases for Advanced Features -> Under the Hood -> aaa24a82-59ae-4e30-baea-124b766b1cca -> User -> 48a83ee5-bb35-45fe-ac72-347b9a5cde78 -> Assistant -> 114949b2-0cda-4a48-a746-565185d983f7 -> Tool -> 9351035a-5fb3-4196-ab28-00f2d055f2a4 -> Assistant -> Lock -> 1. Acquiring and Releasing a Lock -> 2. Common Use-Cases -> 3. Under the Hood -> aaa26ea7-be3a-4754-8041-262f7d594988 -> User -> 6dc0b33d-eb92-4e52-a234-fd71a726b982 -> Assistant -> 716051e8-b953-427b-9094-4784bd24bf52 -> Tool -> c82dea23-a791-4ced-8798-9ac54e1a4f59 -> Assistant -> 2. Timeouts -> 3. Common Use-Cases for Timeouts -> 4. Under the Hood for Timeouts -> aaa2b275-90be-40ad-9f74-8a2e476ea8fa -> User -> 4216df09-bc59-4114-82b2-aa56a485dec7 -> Assistant -> bb800078-4902-40c4-841d-3d2158678bbc -> Tool -> 4cf8a55a-f8e1-4947-9bc2-f2c7dff4551c -> Assistant -> Event -> 1. Basic Operations -> 2. Common Use-Cases -> 3. Additional Toy Example -> 4. Under the Hood -> aaa278c8-2cb7-43ed-bea6-50f03c00e19b -> User -> 9312f27a-e9e5-4c85-b6a7-cd934371548e -> Assistant -> 559685cb-f762-46ac-bb92-a23de4af6727 -> Tool -> aaa2faf1-3955-472f-b520-7ac04fa5213b -> User -> d42e6a8c-2f13-437e-b152-2db8dbc974a9 -> Assistant -> 7ad95c66-85c0-4473-ab15-c93fffd84bcb -> Tool -> aaa2f619-fc42-4ba1-916d-51b59e7946e0 -> User -> 6f31a534-d29b-408c-b3a5-efbb3d25a342 -> Assistant -> dc49c1d0-abe9-4db6-9876-4460122ee2f0 -> Assistant -> 6aaf87cf-4d70-4033-9f9b-5bb7094353fe -> Tool -> 8f8c00c3-d57c-416e-af53-ff5873b73764 -> Assistant -> 1c8b4b15-4a86-49bb-9c03-4f1f193af18a -> Assistant -> ec00ce06-a0a1-4751-b27d-b26e08ceb275 -> Tool -> aaa227f8-7dd5-4361-8258-88ef6f517c33 -> User -> 6cce2c76-83c7-4bdc-b84c-a58dc5c78369 -> Assistant -> Condition -> 1. Basic Operations -> 2. Common Use-Cases -> 3. Under the Hood -> 4. Toy Problems Ideal for Condition -> aaa21794-6bfb-4283-80c7-8da0a327cb6b -> User -> 06360382-f04a-4dea-95af-987e6ac35d7d -> Assistant -> 81a023c5-b2f4-4f23-8df9-9df482d21ee1 -> Tool -> bf234c59-f2d1-48fb-b3d1-a07e29bbf957 -> Assistant -> 9ea1c19f-bc7c-4796-a71a-f022b328ee34 -> Assistant -> d7bb362b-e8aa-4b8f-b2e2-a2f2121f7f95 -> Tool
+---
+# Tool
+
+```python
+---------------------------------------------------------------------------
+AttributeError                            Traceback (most recent call last)
+Cell In[12], line 26
+     23         return decorator
+     25 # Example FSM subclass
+---> 26 class MyFSM(FSM):
+     27     def __init__(self, value):
+     28         super().__init__()
+
+Cell In[12], line 32, in MyFSM()
+     28     super().__init__()
+     29     self.value = value
+     31 @FSM.transition(from_state="INIT", to_state="RUNNING")
+---> 32 async def init_to_running(self):
+     33     print(f"Transitioning from INIT to RUNNING; value: {self.value}")
+     34     self.value += 1
+
+Cell In[12], line 21, in FSM.transition.<locals>.decorator(func)
+     19         self.state = to_state
+     20         self.condition.notify_all()
+---> 21 cls.transition_map[from_state] = wrapper
+     22 return wrapper
+
+AttributeError: type object 'FSM' has no attribute 'transition_map'
+
+```
+
+[child ⬇️](#bac644b2-781a-44ca-b895-9e1d0d47a823)
+
+---
+
+(other branch ⎇)
+###### bac644b2-781a-44ca-b895-9e1d0d47a823
+[parent ⬆️](#d7bb362b-e8aa-4b8f-b2e2-a2f2121f7f95)

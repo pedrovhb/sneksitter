@@ -1,0 +1,78 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Audio Metrics_ VAD, SNR, C50.md
+heading_stack: <root> -> b1e23d59-6ad0-4ef7-a169-acf2e339bd00 -> System -> 624193d3-c2b2-4bf7-a466-07d277afd1ce -> System -> aaa2d697-3c69-41fa-9d99-fbca08692e7a -> User -> apply model -> iterate over each frame -> ... -> 12.952 vad=100% snr=51 c50=17 -> 12.968 vad=100% snr=52 c50=17 -> 12.985 vad=100% snr=53 c50=17 -> ... -> fb8a49f1-6eac-4f76-8150-43797a373ea6 -> Assistant -> aaa2ddf2-1647-4fb1-8bfd-b2c64f9f1332 -> User -> 524563db-b004-4ef8-9b0b-070f499904f2 -> Assistant -> 1. Preprocessing -> 2. Voice Activity Detection (VAD) -> 3. Segment Audio -> 4. Signal-to-Noise Ratio (SNR) Filtering -> 5. Export Segments -> 6. Optional: Post-processing -> aaa2c47a-8e13-43af-a844-5dcf0bfc72ee -> User -> 5b6cd6e3-e03b-4269-bc74-c1b9788634a6 -> Assistant -> SNR (Signal-to-Noise Ratio) -> C50 (Clarity Index) -> Correlation -> Which to Use? -> aaa24ad1-2f18-499f-98ec-7398e741f17f -> User -> f8adef6f-f675-450b-85a9-24dea56c3e1c -> Assistant -> 1. Established Techniques and Literature Dealing with This Problem -> 2. Established Techniques for Dealing with Similar or Analogous Problems -> 3. Designing an Effective Approach for the Task -> Step 1: Initial Segmentation -> Step 2: Feature Calculation -> Step 3: Filtering -> Step 4: Sequence Identification -> Step 5: Scoring and Ranking -> Step 6: Output -> aaa2434c-861f-43a8-a50c-1bef20fc36a4 -> User -> 4bd45e48-5203-4a76-bf48-4fdde9f8e324 -> Assistant -> aaa258d3-afb4-45cc-9651-7a967a7032e9 -> User -> 02c6bd0d-7e79-4eb4-92c0-b7faebd86582 -> Assistant -> 1eed05f2-09c2-4749-ab23-91019cdfb537 -> Tool -> d2d1461c-8f9c-4afc-878f-5ea9577be3cd -> Assistant -> aaa21684-e58c-4067-a343-ae55f1d4af52 -> User -> f8a80132-ddd5-4111-8759-ccec18e91951 -> Assistant -> ab99d04b-8160-4908-aa1d-2319a2850d47 -> Tool -> 08489ce8-ab5c-4619-b71c-6068d57907e1 -> Assistant -> aaa2e5a3-b59e-4a2f-bf2d-97c1cfed3752 -> User -> 06a5d9da-05b2-437c-93c5-870274b3fb55 -> Assistant -> d7e4328f-a492-4eae-a99f-3ee18f6a09c2 -> Tool -> c9bf0fdd-e3c4-41b4-a71b-631b6ccc316e -> Assistant -> aaa29a6b-06ac-4304-a679-022f597690de -> User -> a531c8af-e3c8-4af6-bf7c-e8aaa5528a9a -> Assistant -> More Sophisticated Heuristics and Algorithms -> Variable Size Window Analysis -> How to Implement -> aaa29e42-976f-492d-b821-c29c7a9936aa -> User -> 391aafe1-2faa-401d-9063-9ee763aeddcd -> Assistant
+---
+# Assistant
+
+```python
+from typing import Optional
+from collections import deque
+
+# Define a function to calculate the Exponential Moving Average (EMA)
+def ema(values: List[float], alpha: float) -> List[float]:
+    ema_values = []
+    ema_current = values[0]
+    for value in values:
+        ema_current = (1 - alpha) * ema_current + alpha * value
+        ema_values.append(ema_current)
+    return ema_values
+
+# Function to dynamically adjust the window size based on metrics and identify sequences
+def dynamic_window_sequences(frames: List[Frame], min_window_size: float, max_window_size: float) -> List[FrameSequence]:
+    sequences = []
+    current_sequence = FrameSequence()
+    window_frames = deque()
+    window_size = 0.0
+
+    for frame in frames:
+        # Update window
+        window_frames.append(frame)
+        window_size += frame.duration
+
+        # Remove old frames if window size exceeds max_window_size
+        while window_size > max_window_size:
+            old_frame = window_frames.popleft()
+            window_size -= old_frame.duration
+
+        # Calculate average metrics for the current window
+        avg_vad = statistics.mean(frame.vad for frame in window_frames)
+        avg_snr = statistics.mean(frame.snr for frame in window_frames)
+        avg_c50 = statistics.mean(frame.c50 for frame in window_frames)
+
+        # Calculate EMA for the current window
+        ema_vad = ema([frame.vad for frame in window_frames], 0.1)[-1]
+        ema_snr = ema([frame.snr for frame in window_frames], 0.1)[-1]
+        ema_c50 = ema([frame.c50 for frame in window_frames], 0.1)[-1]
+
+        # Dynamic window adjustment based on EMA of VAD
+        if ema_vad > 0.5:
+            max_window_size = min(max_window_size * 1.1, 5.0)
+        else:
+            max_window_size = max(max_window_size * 0.9, 1.0)
+
+        # Check if the current frame should be added to the current sequence
+        if avg_vad >= VAD_THRESHOLD and avg_snr >= SNR_THRESHOLD and avg_c50 >= C50_THRESHOLD:
+            current_sequence.frames.append(frame)
+
+            # If the current sequence has sufficient duration, save it
+            if current_sequence.duration >= Dmin:
+                sequences.append(current_sequence)
+                current_sequence = FrameSequence()
+
+    return sequences
+
+# Test the sophisticated method using the mock data
+dynamic_sequences = dynamic_window_sequences(mock_output, min_window_size=0.5, max_window_size=3.0)
+
+# Display ranked sequences
+for idx, seq in enumerate(dynamic_sequences):
+    print(f"Rank {idx+1}, Duration: {seq.duration}, Score: {seq.score()}, Avg VAD: {seq.avg_vad}, Avg SNR: {seq.avg_snr}, Avg C50: {seq.avg_c50}")
+```
+
+[child ⬇️](#de8293c1-dd45-4767-b2f5-337b5b2b890a)
+
+---
+
+(main branch ⎇)
+###### de8293c1-dd45-4767-b2f5-337b5b2b890a
+[parent ⬆️](#391aafe1-2faa-401d-9063-9ee763aeddcd)

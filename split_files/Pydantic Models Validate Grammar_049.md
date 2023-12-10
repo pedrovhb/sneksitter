@@ -1,0 +1,40 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Pydantic Models Validate Grammar.md
+heading_stack: <root> -> 061eaf6e-d372-4cb3-89fb-2c4a94f643f6 -> System -> cc0cd000-c5d4-4660-bc2e-8fe013b3c090 -> System -> aaa29d07-977b-4c5b-84ea-2dbd6660aa55 -> User -> Basic Info -> Internal Nodes -> Task -> a59e5ca8-0836-43aa-95ae-557da12f334d -> Tool -> df057f39-09fe-452a-a373-0e8af0517ed8 -> Assistant -> eac7e948-a00f-48dc-9291-b50e427443d8 -> Tool -> 269ca8b2-1769-4ac8-8a5d-deb74bea2c07 -> Assistant -> f12a4d59-1929-403d-abba-eb91897bd209 -> Assistant -> 7a1efd11-fe1f-45ce-8b70-9980dd6701b5 -> Tool -> d2cd1215-a1ae-4c2a-b2e0-8fdba68f2e90 -> Assistant -> a37fa0ec-cfd0-4c94-9569-4b2f95e88c3b -> Assistant -> 2cc0efdf-d6d5-4231-bbfc-49f199cba9b3 -> Tool -> 1a5fb753-2396-462e-8a40-245073e84638 -> Assistant -> aaa214e6-f126-4374-aa7a-a864d4a4a650 -> User -> c9a1a2b6-9829-4136-84a4-7fb52290ecc2 -> Assistant -> 0aac7ebc-176b-4f59-8385-8754815705e0 -> Tool -> 90c0afda-35b5-4d6c-b767-652a10ec7009 -> Assistant -> aaa251f8-f462-4594-a7f4-5110ef19aa88 -> User -> 6f4a1dde-3ce3-4099-8dba-56f8f2ecce2e -> Assistant -> 06d698da-0d98-48ba-8744-ea08aeb456a5 -> Tool -> 91c2c938-df80-4721-9821-48906b31862c -> Assistant -> aaa2bc5d-a4c0-4982-907a-b33f5407edf6 -> User -> a2c08485-4965-42e5-9297-a02f55ebe428 -> Assistant
+---
+# Assistant
+
+```python
+# Correcting the approach for generating the tree view by resolving inheritance trees recursively.
+# The previous approach was limited and did not accurately represent the hierarchical structure.
+
+# First, let's create a mapping of supertypes to their immediate children
+supertype_to_children = {st: [] for st in validated_data.supertypes}
+
+# Populate the mapping by examining each rule's type and named status
+for rule_name, rule_data in validated_data.rules.items():
+    if rule_data.type in validated_data.supertypes:
+        supertype_to_children[rule_data.type].append(rule_name)
+
+# Recursive function to generate the tree view
+def generate_tree_view(supertype, level=0, prefix="|- "):
+    output = "  " * level + prefix + supertype + "\n"
+    for child in supertype_to_children.get(supertype, []):
+        output += generate_tree_view(child, level + 1)
+    return output
+
+# Generate the tree view for each supertype
+tree_views = {st: generate_tree_view(st) for st in validated_data.supertypes}
+
+# Combine all tree views into a single string for display
+tree_view_str = "\n".join(f"Supertype: {st}\n{tree}" for st, tree in tree_views.items())
+print(tree_view_str)
+```
+
+[child ⬇️](#adbaeae2-7686-4bd8-a984-217f8adb12f8)
+
+---
+
+(other branch ⎇)
+###### adbaeae2-7686-4bd8-a984-217f8adb12f8
+[parent ⬆️](#a2c08485-4965-42e5-9297-a02f55ebe428)

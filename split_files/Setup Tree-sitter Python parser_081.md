@@ -1,0 +1,149 @@
+---
+file: /home/pedro/Documents/chatgpt_export/Markdown/Setup Tree-sitter Python parser.md
+heading_stack: <root> -> 48404b29-4887-462e-acd5-c1ecf0317fbf -> System -> 116c69b9-0217-4c43-bedc-42dcbf0f826d -> System -> aaa2b2b9-a972-49a4-8072-387253454bc2 -> User -> 65ebe623-cb59-4071-a891-b0ecac4a7299 -> Assistant -> 3b9d8f44-31ea-4a18-a85c-2144c2c1c659 -> Tool -> 74a3cf29-c1fc-4242-817b-f8e9f83315ef -> Assistant -> 8801ae9a-ded1-475a-a3e9-bd817697ad99 -> Tool -> 133fb8b4-7853-4484-b203-3efbc6ed24b1 -> Assistant -> aaa293e9-a16a-4dcb-bf1e-e1a857731e97 -> User -> 953ccdca-be2f-4765-bdf5-13151dff1986 -> Assistant -> 9f67d0a5-d0f4-44e9-8fa7-40963c60e88f -> Tool -> 4dc004ce-1401-4ffc-871d-bd967d2f63a9 -> Assistant -> 99984851-9314-483f-a2a3-126c895dec19 -> Assistant -> da744ba2-ecd2-4dc0-8655-fa8aaee2bf9b -> Tool -> 15f61e74-54fd-47d9-8008-f0d889bf12b7 -> Assistant -> aaa2d60b-338e-4152-9e50-83b6a20eff30 -> User -> de6b35bd-5bff-4de0-95b8-221d8d435c40 -> Assistant -> 4cdff389-2396-4ab1-be1d-8b1b82078b94 -> Tool -> 4cb279b0-a577-45ef-94ca-c4387df6dbab -> Assistant -> aaa2cde9-4bc5-421a-8b93-1227a5b142ce -> User -> 08eb7667-59b0-4428-bac9-03470a3c43e9 -> Assistant -> da0e3adc-f279-4bb0-8190-f613e2c89c6f -> Tool -> ea4b757d-c12b-4ea8-9576-483fac3d32d7 -> Assistant -> aaa2fadc-e768-42c3-8f1d-1e2175896635 -> User -> 0ca77f9c-ecfc-4df4-be6b-ec2c96eb4460 -> Assistant -> aaa2bf74-6601-4af7-bc2d-ab12017d2dac -> User -> 0eaa25f5-df9f-4760-8870-6c10e86e7b93 -> Assistant -> Base Classes and Data Models -> Builder Pattern -> Idiomatic Use -> Query Serialization -> Support for Complex Queries -> Convenience Functions -> DSL-like Experience -> Trade-offs and Considerations -> Conclusion -> aaa29063-77a1-4d2e-bd50-f6ee519da7f6 -> User -> e05fc06a-8b75-42da-b78a-c76514e42642 -> Assistant -> Basic Building Blocks -> Dataclasses for Basic Blocks -> Builder Pattern -> QueryBuilder Class -> Composing Complex Queries -> Example Usage -> Extending for Advanced Features -> Validating Queries -> Type Safety and Intellisense -> Summary -> aaa293aa-2e35-42a9-975e-2c60025c5c81 -> User -> e39c17cd-eb8c-44f0-921c-f747f586900f -> Assistant
+---
+# Assistant
+
+Certainly, a more concrete design that incorporates advanced features is warranted. Let's start by envisioning how an ideal interface would look from the user's perspective, using a design-by-contract style.
+
+### Hypothetical Usage
+
+```python
+# Create a new query builder instance
+qb = QueryBuilder()
+
+# Simple query for capturing function definitions and calls
+query = (qb.node('function_definition')
+           .capture_as('function_def')
+           .node('identifier')
+           .field('name')
+           .capture_as('function_name')
+           .end()
+         .node('call_expression')
+           .capture_as('function_call')
+           .node('identifier')
+           .field('function')
+           .capture_as('called_function')
+           .end()
+         .build())
+
+# Advanced query with anchors, wildcards, and predicates
+advanced_query = (qb.node('assignment_expression')
+                    .anchor_start()
+                    .node('identifier')
+                    .capture_as('variable')
+                    .end()
+                  .node('function')
+                    .capture_as('assigned_function')
+                    .wildcard()
+                    .predicate('eq?', '@assigned_function', 'main')
+                    .end()
+                  .anchor_end()
+                  .build())
+```
+
+### API Design
+
+#### Node Construction and Capture
+
+The `.node()` method will initiate the construction of a new node. The `.capture_as()` method would be used to specify the capture name for the preceding node or field.
+
+```python
+def node(self, type: str) -> 'QueryBuilder':
+    ...
+
+def capture_as(self, name: str) -> 'QueryBuilder':
+    ...
+```
+
+#### Field Qualification
+
+To add a field to a node, we'll use the `.field()` method.
+
+```python
+def field(self, name: str) -> 'QueryBuilder':
+    ...
+```
+
+#### Grouping and Nesting
+
+The `.end()` method will signify the end of a nested query, essentially "closing" a node or a field, allowing you to continue with the parent query.
+
+```python
+def end(self) -> 'QueryBuilder':
+    ...
+```
+
+#### Anchors and Wildcards
+
+Anchors and wildcards can be added using `.anchor_start()`, `.anchor_end()`, and `.wildcard()` methods.
+
+```python
+def anchor_start(self) -> 'QueryBuilder':
+    ...
+
+def anchor_end(self) -> 'QueryBuilder':
+    ...
+
+def wildcard(self) -> 'QueryBuilder':
+    ...
+```
+
+#### Predicates
+
+Predicates like `eq?` can be added using the `.predicate()` method, which takes the predicate name and its arguments.
+
+```python
+def predicate(self, name: str, *args) -> 'QueryBuilder':
+    ...
+```
+
+### Data Structures
+
+Nodes, fields, and captures can be represented as Python dataclasses.
+
+```python
+from dataclasses import dataclass
+from typing import List, Union
+
+@dataclass
+class Node:
+    type: str
+    capture: str = None
+    field: str = None
+    anchor: str = None
+    wildcard: bool = False
+    predicates: List[str] = None
+```
+
+### Query Builder Class
+
+The `QueryBuilder` class will maintain an internal list of nodes, manage the nesting levels, and construct the final S-expression.
+
+```python
+class QueryBuilder:
+    def __init__(self):
+        self.query = []
+        self.nesting_level = 0
+```
+
+### Query Validation and Building
+
+The `.build()` method would validate and transform the internal representation into the final S-expression.
+
+```python
+def build(self) -> str:
+    # Validate and build the S-expression
+```
+
+### Summary
+
+This design aims to provide a cohesive, fluent, and type-safe API for building Tree-Sitter queries. It allows for the construction of both simple and complex queries, incorporating advanced features like anchors, wildcards, and predicates seamlessly. The usage of Python dataclasses and type hints will ensure that the interface is both robust and user-friendly.
+
+[child ⬇️](#aaa22527-f7af-4d58-9cde-1ff0cf27b18f)
+
+---
+
+(main branch ⎇)
+###### aaa22527-f7af-4d58-9cde-1ff0cf27b18f
+[parent ⬆️](#e39c17cd-eb8c-44f0-921c-f747f586900f)
